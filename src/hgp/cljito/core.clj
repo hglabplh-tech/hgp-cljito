@@ -1,4 +1,4 @@
-(ns cljito.core
+(ns hgp.cljito.core
   (:import [org.mockito Mockito]
            [org.mockito.verification VerificationMode]))
 
@@ -24,7 +24,7 @@
    useful for Mockito methods that expects throwables as varargs."
   [& throwable-list]
   (into-array Throwable throwable-list))
-
+;;(-> (meta #'ab_func) :arglists first count)
 (defmacro when->
   "Stubs the given mocked object. Returns the mocked object,
    making it very easy to create mocks in tests. For example:
