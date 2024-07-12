@@ -1,5 +1,6 @@
 (ns hgp.cljito.real-fun-checkers-test
   (:require [clojure.test :refer :all]
+            [clojure.pprint :refer :all]
             [hgp.cljito.real-fun-checkers :refer :all])
   (:import (clojure.lang Symbol Namespace))
   )

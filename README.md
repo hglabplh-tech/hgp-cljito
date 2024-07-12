@@ -1,70 +1,62 @@
-# cljito [![Build Status](https://travis-ci.org/shaolang/cljito.png)](https://travis-ci.org/shaolang/cljito) [![Clojars Project](https://img.shields.io/clojars/v/cljito.svg)](https://clojars.org/cljito)
+# cljito/fun - functional mocking vs. Mockito
 cljito is a Mockito wrapper for Clojure. Unlike the other libraries,
 cljito aims to be a super-thin wrapper over Mockito, so that
 cljito can (hopefully) support Mockito's bells and whistles
 with as little changes as possible.
 
+**cljito/fun - __!!this fork!!__ - is a mocking on base of real functional
+programming in clojure using the language features as defmacro and with-redefs
+for mocking the functions also the meta information of the clojure compiler is used**
+
+
 ## Usage
 
-In your `project.clj`, add the dev dependencies `[cljito "0.2.3"]`
-and `[org.mockito/mockito-core "3.3.0"]`,
-and you are all set to start using Mockito in your tests.
+In your `project.clj`, add the dev dependencies 
 
-The most important function to know is `when->`, the starting point of
-most of your mocking needs.
+and you are all set to start using fun/mocking in your tests.
 
-    (import '[java.util List])
-    (use 'cljito.core)
+The base of this kind of mocking is that you can define rules and dependent on the rules either
+the real function is called or that a action defined in `when->` takes place:
 
-    (def mocked (when-> (mock List) (.get 0) (.thenReturn "it works")))
-    (.get mocked 0)       ; returns the "it works" string
+```clojure
+(when-> i-am-a-fake-fun return-val [5]
+        any-int? any-int? any-int?)
+```
+#### **Short explanation of `when->` :**
+- the first parameter is the name of the **__existing__** function. 
+- the second parameter is the action taken if the function is __'mocked'__
+- the third parameter are the argument(s) for the action function
+- the __**rest**__ of the parameters are the condition functions one for each parameter
+if the parameter count will differ from the count of attributes given
+it will lead to an execution error.
 
-    ; chaining works too
-    (when-> mocked (.get 100) (.thenReturn "first") (.thenReturn "second"))
-    [(.get mocked 100) (.get mocked 100)] ; returns ["first" "second"]
 
-    (def mocked-2 (mock List))
-    (when-> mocked-2 (.get 100) (.thenThrow RuntimeException))
-    (.get mocked-2 100)   ; RuntimeException is thrown
+Here is the simple call with which the function is called but the difference is that 
+the fact if the function is called or a **__mock__** of it depends on a `when->`statement
+like the when statement above 
 
-    ; the following four are equivalent
-    (verify-> mocked-2 (.get 100))
-    (verify-> mocked-2 1 (.get 100))
-    (verify-> mocked-2 (times 1) (.get 100))
-    (verify-> mocked-2 (Mockito/times 1) (.get 100))
+```clojure
+(fun-mock-call i-am-a-fake-fun 7 8 9)
+```
 
-    (verify-> mocked-2 never (.get 0))
+The next way of mocking is the macro `fun-mock` with this macro a block with one or
+more functions being **__'mocked'__**:
 
-    ; the following two are equivalent
-    (verify-> mocked-2 (at-least 2) (.get 100)) ; throws AssertionError
-    (verify-> mocked-2 (Mockito/atLeast 2) (.get 100))
-
-    ; you can also use the do-* variants
-    (.get (do-return "this works too"
-                     (.when (mock List))
-                     (.get 0))
-          0)    ; returns the "it works too" string
-
-    ; RuntimeException is thrown
-    (.clear (do-throw (throwables (RuntimeException.))
-                      (.when (mock List))
-                      (.clear)))
-
-    ; nothing is done
-    (.add (do-nothing (.when (mock List)) (.add "not added")) "not added")
-
+Here a example call 
+```clojure
+(fun-mock [i-am-a-fake] [12 9 3]
+                        (fn [& arguments]
+                          (println arguments)))))
+```
 The code snippet above demonstrates that very little is
 cljito specific; `.thenReturn` and `.thenThrow` are really Mockito
 methods. Despite that, cljito also provides helper functions (e.g.,
 `at-least`, `at-least`, `never`) to make calls to Mockito's static
 methods easier.
 
-cljito currently does not support chaining do-* stubbings.
 
-cljito does not prescribe which version of Mockito you should use;
-you must specify Mockito's version in your project.clj dependencies.
 
-cljito works with:
+The original cljito works with:
 
 1. Mockito 1.9.5.
 2. Mockito 2.25.0.
@@ -72,6 +64,6 @@ cljito works with:
 
 ## License
 
-Copyright (c) 2020 Shaolang
+Copyright (c) 2020 Shaolang / Copyright (c) 2024 Glab-Plhak
 
 Distributed under the Eclipse Public License, the same as Clojure.

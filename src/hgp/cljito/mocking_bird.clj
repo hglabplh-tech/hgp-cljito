@@ -51,9 +51,15 @@
        (throw (Exception. (str "No such function: " '~fun-name))))))
 
 (defmacro when-> [function action val & args]
-  `(swap! rule-vect conj
-          (Rule. ~function ~action ~val [~@args]))
-  )
+  `(if (not= (alength ~args)
+            (get-fun-meta-args-count ~function))
+    (throw
+      (Exception.
+        "Arguments do not match predicate per argument count"))
+    (swap! rule-vect conj
+          (Rule. ~function ~action
+                 val
+                 ~@args))))
 
 (defn return-val [value]
   value)
@@ -63,14 +69,7 @@
 (defn do-nothing [dummy]
   'nothing)
 
-(println (macroexpand-all
-           '(when-> testit return-val 5 any-boolean? any-int? any-byte?)))
-(println (macroexpand-all
-          '(when-> testit throw-ex (Exception. "blah")
-                    any-boolean? any-int? any-byte?)))
-(println (macroexpand-all
-           '(when-> testit do-nothing 'dummy
-                    any-boolean? any-int? any-byte?)))
+
 
 (defn find-action-rule-for-fun [func-name]
   (first (filter #(= func-name (:function-name %)) @rule-vect)))
@@ -95,29 +94,29 @@
     ))
 
 
-(defn filter-action [fun-name & args]
-  (let [rule (find-action-rule-for-fun fun-name)]
+(defn filter-action [func-name & args]
+  ~@(let [rule (find-action-rule-for-fun func-name)]
     (if (not (nil? rule))
-      (let [when-clause (:when-clause rule)]
+      (let [when-clause (:when-clause rule)
+            the-args# (:arg-values rule)]
         (loop [the-clauses when-clause
                result Boolean/TRUE]
           (if (not (empty? the-clauses))
-            (let [res (and result (apply (fn [arg]
-                                           ((first the-clauses) arg))
+            (let [res (and result (apply (first the-clauses)
                                          args))]
               (recur (rest the-clauses) res))
             (if result
               (let [the-action (:action rule)
-                    the-args (:arg-values rule)]
-                (the-action the-args))
-              `((var fun-name) args))
-            ))
-        )
-    `((var fun-name) args)
+                    ]
+                (the-action the-args#)
+              ((var ~func-name) args))
+            )
+        ) ))
+      ((var ~func-name) args)
   )))
 
 
-(defn fun-mock-call [fun-name & args]
+(defmacro fun-mock-call [fun-name & args]
   `(do
     (collect-meta ~fun-name ~@args)
     (collect-flow-calls ~fun-name ~@args)
@@ -140,32 +139,8 @@
 
 (defmacro fun-mock [& arguments]
   (let [[fun-names# args# body#] (retrieve-fun-names-vect ~@arguments)]
-    `(with-redefs #(map (fn [~name]
-                        (str  ~name " `{:body (fun-mock-call" ~name " args#)}"))
-       fun-names#) body#)))
-
-
-
-(defn i-am-a-fake [a b c]
-  (* a b c))
-(defn test-west [a b]
-  (* a b))
-
-(defn test-east [a b]
-  (- a b))
-
-(println (i-am-a-fake 8 9 4))
-(println (macroexpand-all
-           '(when-> i-am-a-fake return-val 5 any-int? any-int? any-int?)))
-
-(def myfun  '(fun-mock [i-am-a-fake] [12 9 3]
-                                     (fn [& arguments]
-                                       (println arguments))))
-
-(println (dbg (fun-mock [i-am-a-fake] [12 9 3]
-                        (fn [& arguments]
-                          (println arguments)))))
-(println (macroexpand myfun))
-(println (macroexpand-1 myfun))
-(println (macroexpand-all myfun))
-(println (i-am-a-fake 5 6 7))
+    ~@(with-redefs ~@(map (fn [name]
+                        [name
+                              ~@{:body (fun-mock-call name  args# )}]))
+       fun-names#) ~@body#)
+    )
