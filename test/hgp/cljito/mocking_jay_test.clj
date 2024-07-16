@@ -8,17 +8,20 @@
 
 (defn i-am-a-fake-fun [a b c]
   (* a b c))
-(when-> i-am-a-fake-fun return-val 5
-        :any-int?-key :any-int?-key :any-int?-key)
+
 
 (deftest test-simple.mock
   (testing "the simple mock"
+    (when-> i-am-a-fake-fun return-val 5
+            :any-int?-key :any-int?-key :any-int?-key)
   (is (= (fun-mock-call i-am-a-fake-fun  7 8 9) 5))
   ))
 
 (deftest test-extended.mock
   (testing "the extended mock"
-   (fun-mock i-am-a-fake-fun
+    (when-> hgp.cljito.mocking-jay-test/i-am-a-fake-fun return-val 5
+            :any-int?-key :any-int?-key :any-int?-key)
+   (fun-mock  hgp.cljito.mocking-jay-test/i-am-a-fake-fun
                      (is (= (i-am-a-fake-fun 7 8 9) 5))
                      7 8 9)
     ))

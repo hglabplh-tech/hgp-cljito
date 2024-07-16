@@ -4,7 +4,10 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :profiles {:dev {:dependencies [[metosin/testit             "0.4.0"]
-                                  [org.clojure/clojure        "1.10.1"]
+                                  [org.clojure/clojure "1.11.1"]
+                                  [org.clojure/core.async "1.6.681"]
+                                  [de.active-group/active-clojure "0.42.2"]
+                                  [de.active-group/active-data "0.2.1"]
                                   [org.mockito/mockito-core   "5.12.0"]
                                   [org.mockito/mockito-all    "2.0.2-beta"]
                                   [org.mockito/mockito-junit-jupiter "5.12.0"]

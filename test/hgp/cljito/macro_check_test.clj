@@ -13,6 +13,13 @@
 (deftest fun-fun-mock-macro-test
   (testing "Test the fun-mock macro"
     (is (= (macroexpand-all
-                            '(fun-mock m-test-fun-one [12 9 3]
-                                        (println "arguments"))
-             ) 7))))
+                            '(fun-mock m-test-fun-one
+                                        (println "arguments")
+                                       12 9 3)
+             ) '(fun-mock
+                             m-test-fun-one
+                             (println
+                               "arguments")
+                             12
+                             9
+                             3)))))

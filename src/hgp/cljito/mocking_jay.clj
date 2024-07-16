@@ -134,8 +134,10 @@
                 (apply func-name args))
               ))
           ))
+      (do
+        (println "fallback")
       (apply func-name args)
-      )))
+      ))))
 
 
 (defn fun-mock-call [fun-name & args]
@@ -158,7 +160,7 @@
      x#))
 
 (defn fun-mock [func body & args]
-    `(with-redefs [~func (fn [a b c]
-                             (fun-mock-call ~func ~args))]
+    `(clojure.core/with-redefs [~func  (fun-mock-call
+                                                ~func ~args)]
          ~body
   ))
