@@ -1,4 +1,4 @@
-(defproject hgp.cljito "0.2.4-SNAPSHOT"
+(defproject hgp.cljito/mock-fn-hgp "0.2.4-SNAPSHOT"
   :description "Mockito wrapper for Clojure"
   :url "https://github.com/shaolang/cljito"
   :license {:name "Eclipse Public License"
