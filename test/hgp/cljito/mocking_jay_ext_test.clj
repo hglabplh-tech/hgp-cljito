@@ -8,8 +8,8 @@
 
 (schema/set-fn-validation! (boolean 1))
 
-;;:schema (=> Bool Str Num Num),
-;;:active.data.realm.attach/realm #active.data.realm.internal.records/function-realm
+;; :schema (=> Bool Str Num Num),
+;; :active.data.realm.attach/realm #active.data.realm.internal.records/function-realm
 ;; {description function (string, number, number) -> boolean
 (defn test-add :- realm/boolean
   [msg :- realm/string a :- realm/number b :- realm/number]

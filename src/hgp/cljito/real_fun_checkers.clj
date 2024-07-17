@@ -36,3 +36,18 @@
 (defmacro get-fun-meta-col [the-fun-name]
   `(get-fun-meta-val-by-key ~the-fun-name
                             :column))
+
+(defn parse-base-schema [input]
+  (let [ret-val (first input)
+        params (first (rest input))]
+    [ret-val params]
+    ))
+
+(defmacro get-fun-meta-schema [the-fun-name]
+ `(let [result# (get-fun-meta-val-by-key ~the-fun-name
+                                          :schema)
+        cooked-result# (parse-base-schema result#)
+         ]
+          cooked-result#
+     ))
+

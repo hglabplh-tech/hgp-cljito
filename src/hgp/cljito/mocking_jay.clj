@@ -93,14 +93,44 @@
 (defn find-meta-for-fun [func-name]
   (first (filter #(= func-name (:function-name %)) @mock-meta)))
 
-(defn collect-meta [func-name & args]
+
+(defn parse-arg-types [arg-type-defs]
+  (let [id (first (first arg-type-defs))
+        descriptors (first  (second (first arg-type-defs)))
+        arg-type-seq (map (fn [val]
+                            (get val :schema)) descriptors)
+        arg-opt?-seq (map (fn [val]
+                            (get val :optional?)) descriptors)
+        arg-name-seq (map (fn [val]
+                            (get val :name)) descriptors)]
+    (pprint arg-type-seq)
+    (pprint arg-opt?-seq)
+    (pprint arg-name-seq)
+    [arg-name-seq arg-type-seq arg-opt?-seq]
+    ))
+
+(defn parse-meta-to-map [schema-val]
+  (let [return-type (second (first schema-val))
+        arg-types (parse-arg-types  (rest schema-val))]
+    [return-type arg-types]
+    ))
+
+
+(defn collect-meta-active-data [func-name & args]
   (if (= (find-meta-for-fun func-name) nil)
-    (do
-      (swap! mock-meta conj (FunMetata. func-name
-                                        (type
-                                          (apply func-name args))
-                                        (map type args)
-                                        nil)))))
+    (let [schema-here? (not= (get-fun-meta-schema func-name) nil)]
+      (if schema-here?
+        (let [schema-val (get-fun-meta-schema func-name)
+              schema-val-map (parse-meta-to-map schema-val)]
+          (swap! mock-meta conj (FunMetata. func-name
+                                            nil
+                                            (map type args)
+                                            nil))
+          )
+        (swap! mock-meta conj (FunMetata. func-name
+                                          nil
+                                          (map type args)
+                                          nil))))))
 
 (defn collect-flow-calls [func-name ret-value & args]
   (do
@@ -141,7 +171,7 @@
 
 
 (defn fun-mock-call [fun-name & args]
-  (apply collect-meta fun-name args)
+  (apply collect-meta-active-data fun-name args)
   (let [result (apply filter-action fun-name args)]
     (apply collect-flow-calls fun-name result args)
     result))
