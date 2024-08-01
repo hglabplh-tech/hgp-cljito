@@ -6,6 +6,7 @@
             [active.data.realm.schema :as realm-schema]
             [clojure.pprint :refer :all]
             [hgp.cljito.real-fun-checkers :refer :all]
+            [hgp.cljito.mocking-jay :refer :all]
             [schema.core :as schema]))
 
 
@@ -41,16 +42,21 @@
     (defn parse-arg-types :- realm/any [arg-type-defs :- realm/any]
           (let [id (first (first arg-type-defs))
                 descriptors (first  (second (first arg-type-defs)))
-                arg-type-seq (map (clojure.core/fn [val]
-                                      (get val :schema)) descriptors)
-                arg-opt?-seq (map (clojure.core/fn [val]
-                                      (get val :optional?)) descriptors)
-                arg-name-seq (map (clojure.core/fn [val]
-                                      (get val :name)) descriptors)]
+                arg-type-seq (vec (map (clojure.core/fn [val]
+                                      (get val :schema)) descriptors))
+                arg-opt?-seq (vec (map (clojure.core/fn [val]
+                                      (get val :optional?)) descriptors))
+                arg-name-seq (vec  (map (clojure.core/fn [val]
+                                      (get val :name)) descriptors))]
+            (pprint id)
             (pprint arg-type-seq)
             (pprint arg-opt?-seq)
             (pprint arg-name-seq)
-            [arg-name-seq arg-type-seq arg-opt?-seq]
+            (let [fun-result  {:names-vect arg-name-seq
+                               :types-vect arg-type-seq
+                               :optional?-vect arg-opt?-seq}]
+              (pprint fun-result)
+              fun-result)
             ))
     (parse-arg-types (rest (get-fun-meta-schema test-add)))
 

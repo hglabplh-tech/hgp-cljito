@@ -45,9 +45,8 @@
                      return-value])
 
 ;; Function Mocking
-(defrecord Attribute [pred-fun])
-(defrecord FunAttributes [])
-(defrecord WhenAttributes [attribute-list])
+(defrecord ActiveDataCustom [var-names var-optional?])
+
 
 (defrecord Rule [function-name
                  action
@@ -97,24 +96,28 @@
 (defn parse-arg-types [arg-type-defs]
   (let [id (first (first arg-type-defs))
         descriptors (first  (second (first arg-type-defs)))
-        arg-type-seq (map (fn [val]
-                            (get val :schema)) descriptors)
-        arg-opt?-seq (map (fn [val]
-                            (get val :optional?)) descriptors)
-        arg-name-seq (map (fn [val]
-                            (get val :name)) descriptors)]
+        arg-type-seq (vec (map (fn [val]
+                                 (get val :schema)) descriptors))
+        arg-opt?-seq (vec (map (fn [val]
+                                 (get val :optional?)) descriptors))
+        arg-name-seq (vec  (map (fn [val]
+                                  (get val :name)) descriptors))]
+    (pprint id)
     (pprint arg-type-seq)
     (pprint arg-opt?-seq)
     (pprint arg-name-seq)
-    [arg-name-seq arg-type-seq arg-opt?-seq]
+    (let [fun-result  {:names-vect arg-name-seq
+                       :types-vect arg-type-seq
+                       :optional?-vect arg-opt?-seq}]
+      (pprint fun-result)
+      fun-result)
     ))
 
 (defn parse-meta-to-map [schema-val]
   (let [return-type (second (first schema-val))
-        arg-types (parse-arg-types  (rest schema-val))]
-    [return-type arg-types]
+        arg-info-map (parse-arg-types  (rest schema-val))]
+    [{:return-type return-type }  {:arg-info-map arg-info-map}]
     ))
-
 
 (defn collect-meta-active-data [func-name & args]
   (if (= (find-meta-for-fun func-name) nil)
@@ -123,14 +126,24 @@
         (let [schema-val (get-fun-meta-schema func-name)
               schema-val-map (parse-meta-to-map schema-val)]
           (swap! mock-meta conj (FunMetata. func-name
-                                            nil
-                                            (map type args)
-                                            nil))
+                                            (get (first schema-val-map)
+                                                 :return-type)
+                                            (get (get (second schema-val-map)
+                                                 :arg-info-map)
+                                                 :types-vect)
+                                            (ActiveDataCustom.
+                                              (get (get (second schema-val-map)
+                                                        :arg-info-map)
+                                                   :names-vect)
+                                              (get (get (second schema-val-map)
+                                                        :arg-info-map)
+                                                   :optional?-vect))))
           )
         (swap! mock-meta conj (FunMetata. func-name
                                           nil
                                           (map type args)
                                           nil))))))
+
 
 (defn collect-flow-calls [func-name ret-value & args]
   (do
@@ -189,8 +202,9 @@
      (println "dbg:" '~body "=" x#)
      x#))
 
-(defn fun-mock [func body & args]
-    `(clojure.core/with-redefs [~func  (fun-mock-call
-                                                ~func ~args)]
-         ~body
-  ))
+(defmacro fun-mock [func body & args]
+  (let [func## ~func
+        args## ~args]
+    `(clojure.core/with-redefs [func## (fun-mock-call func## args##)]
+         @body
+  )))

@@ -43,11 +43,12 @@
     [ret-val params]
     ))
 
-(defmacro get-fun-meta-schema [the-fun-name]
+(defn get-fun-meta-schema [the-fun-name]
  `(let [result# (get-fun-meta-val-by-key ~the-fun-name
                                           :schema)
         cooked-result# (parse-base-schema result#)
          ]
+    (println ~the-fun-name)
           cooked-result#
      ))
 

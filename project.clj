@@ -21,4 +21,9 @@
 
   :scm {:name "git"
         :url  "https://github.com/shaolang/cljito"}
+
+  :source-paths ["src/main/clj"]
+  :java-source-paths ["src/main/java"]                      ; Java source is stored separately.
+  :test-paths ["test/clj"]
+  :resource-paths ["resource"]
   )

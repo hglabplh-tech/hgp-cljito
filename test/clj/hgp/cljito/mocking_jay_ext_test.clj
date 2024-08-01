@@ -3,6 +3,7 @@
   (:require [clojure.test :refer :all]
             [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
+            [hgp.cljito.mocking-jay :refer :all]
             [active.data.realm.schema :as realm-schema]
             [schema.core :as schema]))
 
@@ -17,5 +18,10 @@
     (println msg res)
   (boolean res)))
 
-(println (meta (var test-add)))
-(println  "Result: " (test-add "Here I am with a result: " 0 2))
+
+(deftest the-active-data-base-test
+  (testing "One basic test for mocking with active data"
+    (when-> test-add return-val 5
+            :any-int?-key :any-int?-key :any-int?-key)
+    (is (= (fun-mock-call test-add  7 8 9) 5))
+    ))
