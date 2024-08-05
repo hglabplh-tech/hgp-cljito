@@ -2,7 +2,8 @@
   (:require [clojure.walk :refer :all]
             [clojure.pprint :refer :all]
             [hgp.cljito.real-fun-checkers :refer :all])
-  (:import (clojure.lang ISeq)))
+  (:import (hgp.cljito DeepMock)
+           (clojure.lang IFn Var)))
 
 
 (defn any-boolean? [value] (boolean? value))
@@ -64,6 +65,8 @@
 
 (def rule-vect (atom []))
 
+(def stored-bindings-seq (atom {}))
+
 (defmacro real-fun-checker [fun-name]
   `(let [real-fun# (resolve (var ~fun-name))]
      (if real-fun#
@@ -95,54 +98,54 @@
 
 (defn parse-arg-types [arg-type-defs]
   (let [id (first (first arg-type-defs))
-        descriptors (first  (second (first arg-type-defs)))
+        descriptors (first (second (first arg-type-defs)))
         arg-type-seq (vec (map (fn [val]
                                  (get val :schema)) descriptors))
         arg-opt?-seq (vec (map (fn [val]
                                  (get val :optional?)) descriptors))
-        arg-name-seq (vec  (map (fn [val]
-                                  (get val :name)) descriptors))]
+        arg-name-seq (vec (map (fn [val]
+                                 (get val :name)) descriptors))]
     (pprint id)
     (pprint arg-type-seq)
     (pprint arg-opt?-seq)
     (pprint arg-name-seq)
-    (let [fun-result  {:names-vect arg-name-seq
-                       :types-vect arg-type-seq
-                       :optional?-vect arg-opt?-seq}]
+    (let [fun-result {:names-vect     arg-name-seq
+                      :types-vect     arg-type-seq
+                      :optional?-vect arg-opt?-seq}]
       (pprint fun-result)
       fun-result)
     ))
 
 (defn parse-meta-to-map [schema-val]
   (let [return-type (second (first schema-val))
-        arg-info-map (parse-arg-types  (rest schema-val))]
-    [{:return-type return-type }  {:arg-info-map arg-info-map}]
+        arg-info-map (parse-arg-types (rest schema-val))]
+    [{:return-type return-type} {:arg-info-map arg-info-map}]
     ))
 
 (defn collect-meta-active-data [func-name & args]
   (if (= (find-meta-for-fun func-name) nil)
-    (let [schema-here? (not= (get-fun-meta-schema func-name) nil)]
-      (if schema-here?
-        (let [schema-val (get-fun-meta-schema func-name)
-              schema-val-map (parse-meta-to-map schema-val)]
-          (swap! mock-meta conj (FunMetata. func-name
-                                            (get (first schema-val-map)
-                                                 :return-type)
-                                            (get (get (second schema-val-map)
-                                                 :arg-info-map)
-                                                 :types-vect)
-                                            (ActiveDataCustom.
-                                              (get (get (second schema-val-map)
-                                                        :arg-info-map)
-                                                   :names-vect)
-                                              (get (get (second schema-val-map)
-                                                        :arg-info-map)
-                                                   :optional?-vect))))
-          )
-        (swap! mock-meta conj (FunMetata. func-name
-                                          nil
-                                          (map type args)
-                                          nil))))))
+     (let [schema-here? (not= (get-fun-meta-schema func-name) nil)]
+       (if schema-here?
+         (let [schema-val## (get-fun-meta-schema func-name)
+               schema-val-map## (parse-meta-to-map schema-val##)]
+           (swap! mock-meta conj (FunMetata. func-name
+                                             (get (first schema-val-map##)
+                                                  :return-type)
+                                             (get (get (second schema-val-map##)
+                                                       :arg-info-map)
+                                                  :types-vect)
+                                             (ActiveDataCustom.
+                                               (get (get (second schema-val-map##)
+                                                         :arg-info-map)
+                                                    :names-vect)
+                                               (get (get (second schema-val-map##)
+                                                         :arg-info-map)
+                                                    :optional?-vect))))
+           )
+         (swap! mock-meta conj (FunMetata. func-name
+                                           nil
+                                           (map type args)
+                                           nil))))))
 
 
 (defn collect-flow-calls [func-name ret-value & args]
@@ -179,32 +182,42 @@
           ))
       (do
         (println "fallback")
-      (apply func-name args)
-      ))))
+        (apply func-name args)
+        ))))
 
 
-(defn fun-mock-call [fun-name & args]
-  (apply collect-meta-active-data fun-name args)
-  (let [result (apply filter-action fun-name args)]
-    (apply collect-flow-calls fun-name result args)
-    result))
 
-(defn retrieve-fun-names-vect [arguments]
-  (if (and (vector? (first arguments))
-           (vector? (second arguments)))
-    (let [args (map (fn [name] ~name) (first arguments))
-          body(rest arguments)]
-      [args body])
-    [[] [] ()]))
 
-(defmacro dbg [body]
-  `(let [x# ~body]
-     (println "dbg:" '~body "=" x#)
-     x#))
+(defmacro fun-mock-call [fun-name & args]
+  `(apply collect-meta-active-data ~fun-name ~args)
+  `(let [fun-name## ~fun-name
+         args## ~args
+         result## @(apply filter-action fun-name## args##)]
+     `(apply collect-flow-calls fun-name## result## args##)
+     result##))
 
-(defmacro fun-mock [func body & args]
-  (let [func## ~func
-        args## ~args]
-    `(clojure.core/with-redefs [func## (fun-mock-call func## args##)]
-         @body
-  )))
+(defn mock-call [fun-name]
+  (let [func-name## fun-name]
+   (fn [& args]
+      (fun-mock-call func-name## args)
+      )))
+
+
+(defn store-bindings [& funs]
+  (let [
+        old-vals (map (fn [val]
+                        (.getRawRoot val)) #(list `var %))
+        ]
+    (reset! stored-bindings-seq old-vals)
+    ))
+(defn root-bind [& funs]
+  (map (fn [val]
+         (.bindRoot val (mock-call (deref val)))) #(list `var funs)))
+
+(defmacro mock [fun code]
+  `(let [fun## fun]
+          (with-redefs [fun## (mock-call fun##)]
+    code)))
+
+(defn unmock [funs])
+
