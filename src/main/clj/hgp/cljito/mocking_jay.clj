@@ -123,12 +123,12 @@
     ))
 
 (defn collect-meta-active-data [func-name & args]
-  (if (= (find-meta-for-fun func-name) nil)
-     (let [schema-here? (not= (get-fun-meta-schema func-name) nil)]
+  `(if (= (find-meta-for-fun ~func-name) nil)
+     `(let [schema-here? (not= (get-fun-meta-schema ~func-name) nil)]
        (if schema-here?
-         (let [schema-val## (get-fun-meta-schema func-name)
+         (let [schema-val## (get-fun-meta-schema ~func-name)
                schema-val-map## (parse-meta-to-map schema-val##)]
-           (swap! mock-meta conj (FunMetata. func-name
+           (swap! mock-meta conj (FunMetata. ~func-name
                                              (get (first schema-val-map##)
                                                   :return-type)
                                              (get (get (second schema-val-map##)
@@ -196,23 +196,11 @@
      `(apply collect-flow-calls fun-name## result## args##)
      result##))
 
-(defn mock-call [fun-name]
-  (let [func-name## fun-name]
-   (fn [& args]
+(defmacro mock-call [fun-name]
+  `(let [func-name## ~fun-name]
+   @(fn [args]
       (fun-mock-call func-name## args)
       )))
-
-
-(defn store-bindings [& funs]
-  (let [
-        old-vals (map (fn [val]
-                        (.getRawRoot val)) #(list `var %))
-        ]
-    (reset! stored-bindings-seq old-vals)
-    ))
-(defn root-bind [& funs]
-  (map (fn [val]
-         (.bindRoot val (mock-call (deref val)))) #(list `var funs)))
 
 (defmacro mock [fun code]
   `(let [fun## fun]

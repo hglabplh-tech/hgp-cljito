@@ -1,21 +1,43 @@
 (ns hgp.cljito.real-fun-checkers
-  (:require   [clojure.walk :refer :all]
-              [clojure.pprint :refer :all]))
+  (:refer-clojure :exclude [def defn fn])
+  (:require [clojure.walk :refer :all]
+            [clojure.pprint :refer :all]
+            [active.data.realm :as realm]
+            [active.data.realm :as realm]
+            [active.data.realm.attach :refer :all]
+            [schema.spec.core :refer :all]
+            [schema.core :as schema]))
 
 (defmacro get-fun-meta [funname]
-   `(meta (var ~funname)))
+  `(meta (var ~funname)))
+
+
+;;; implement it with that logic slightly changed
+;; from active-data and in active data it works the thing
+;; with using constantly seems to me a very good idea
+
+
+(defmacro transfer-fun-meta
+  "Macro to set the Meta of the mocked function to a mock"
+  [generated-fun orig-fun]
+  `(do (alter-meta! (var ~generated-fun)
+                    (constantly
+                      (assoc (meta (var ~orig-fun))
+                        :mock-type :fun)))
+       (var ~generated-fun)))
+
 
 (defmacro get-fun-meta-val-by-key [fun-name the-tag]
   `(get (meta (var ~fun-name))
-         ~the-tag))
+        ~the-tag))
 
 (defmacro get-fun-meta-args [the-fun-name]
   `(get-fun-meta-val-by-key ~the-fun-name
-        :arglists))
+                            :arglists))
 
 (defmacro get-fun-meta-args-count [the-fun-name]
   `(count (first (get-fun-meta-val-by-key ~the-fun-name
-                            :arglists))))
+                                          :arglists))))
 
 (defmacro get-fun-meta-ns [the-fun-name]
   `(get-fun-meta-val-by-key ~the-fun-name
@@ -23,7 +45,7 @@
 
 (defmacro get-fun-meta-ns-sym [the-fun-name]
   `(symbol (.toString (get-fun-meta-val-by-key ~the-fun-name
-                            :ns))))
+                                               :ns))))
 
 (defmacro get-fun-meta-name [the-fun-name]
   `(get-fun-meta-val-by-key ~the-fun-name
@@ -37,17 +59,25 @@
   `(get-fun-meta-val-by-key ~the-fun-name
                             :column))
 
-(defn parse-base-schema [input]
+(clojure.core/defn parse-base-schema [input]
   (let [ret-val (first input)
         params (first (rest input))]
     [ret-val params]
     ))
 
 (defmacro get-fun-meta-schema [the-fun-name]
- `(let [result# (get-fun-meta-val-by-key ~the-fun-name
+  `(let [result# (get-fun-meta-val-by-key ~the-fun-name
                                           :schema)
-        cooked-result# (parse-base-schema result#)
+         cooked-result# (parse-base-schema result#)
          ]
-          cooked-result#
+     cooked-result#
      ))
+
+(clojure.core/defn get-fun-meta-schema-anonymous [meta-data]
+  (let [result (get meta-data
+                    :schema)
+        cooked-result (parse-base-schema result)
+        ]
+    cooked-result
+    ))
 

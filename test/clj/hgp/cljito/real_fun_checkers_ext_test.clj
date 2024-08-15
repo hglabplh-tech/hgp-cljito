@@ -1,5 +1,5 @@
 (ns hgp.cljito.real-fun-checkers-ext-test
-  (:refer-clojure :exclude [def defn])
+  (:refer-clojure :exclude [def defn fn])
   (:require [clojure.test :refer :all]
             [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
@@ -7,7 +7,7 @@
             [clojure.pprint :refer :all]
             [hgp.cljito.real-fun-checkers :refer :all]
             [hgp.cljito.mocking-jay :refer :all]
-            [schema.core :as schema]))
+            [schema.spec.core :refer :all]))
 
 
 ;; :schema (=> Bool Str Num Num),
@@ -18,6 +18,23 @@
       (let [res (* a b)]
         (println msg res)
         (boolean res)))
+
+(clojure.core/defn test-fun [name a b]
+  (let [result (* a b)]
+    (println name result)
+    result))
+
+
+(def test-fun-def
+  (let []
+  (println  (macroexpand-1 '(transfer-fun-meta
+    test-fun
+    test-add)))
+  (transfer-fun-meta
+    test-fun
+    test-add))
+  )
+
 
 (deftest test-meta-of-fun-active-data
 
@@ -38,27 +55,6 @@
 
     (pprint (rest
               (get-fun-meta-schema test-add)))
-
-    (defn parse-arg-types :- realm/any [arg-type-defs :- realm/any]
-          (let [id (first (first arg-type-defs))
-                descriptors (first  (second (first arg-type-defs)))
-                arg-type-seq (vec (map (clojure.core/fn [val]
-                                      (get val :schema)) descriptors))
-                arg-opt?-seq (vec (map (clojure.core/fn [val]
-                                      (get val :optional?)) descriptors))
-                arg-name-seq (vec  (map (clojure.core/fn [val]
-                                      (get val :name)) descriptors))]
-            (pprint id)
-            (pprint arg-type-seq)
-            (pprint arg-opt?-seq)
-            (pprint arg-name-seq)
-            (let [fun-result  {:names-vect arg-name-seq
-                               :types-vect arg-type-seq
-                               :optional?-vect arg-opt?-seq}]
-              (pprint fun-result)
-              fun-result)
-            ))
-    (parse-arg-types (rest (get-fun-meta-schema test-add)))
 
     (is (= (second (first (get-fun-meta-schema test-add)))
            java.lang.Boolean))
@@ -92,5 +88,24 @@
                        (first
                          (rest
                            (get-fun-meta-schema test-add)))))))))
-             java.lang.Number))
-        ))
+           java.lang.Number))
+    ))
+
+
+(defmacro get-meta []
+  `(meta (transfer-fun-meta test-fun test-add)))
+(deftest test-get-mock-with-meta
+  (testing "the way to give original meta definitions to the mock"
+
+    (println (type test-fun-def))
+    (println  (get-meta))
+
+    (is (= (test-fun "Hello result:" 7 2) 14))
+    (is (= (test-fun-def "Hello result copy fun:" 7 2) 14))
+    (is (= (second (first (get-fun-meta-schema test-add)))
+           java.lang.Boolean))
+    (is (= (second (first (get-fun-meta-schema-anonymous
+                            (get-meta))))    java.lang.Boolean))
+    ))
+
+
