@@ -92,20 +92,20 @@
     ))
 
 
-(defmacro get-meta []
-  `(meta (transfer-fun-meta test-fun test-add)))
+
+
 (deftest test-get-mock-with-meta
   (testing "the way to give original meta definitions to the mock"
 
     (println (type test-fun-def))
-    (println  (get-meta))
+    (println  (meta test-fun-def))
 
     (is (= (test-fun "Hello result:" 7 2) 14))
     (is (= (test-fun-def "Hello result copy fun:" 7 2) 14))
     (is (= (second (first (get-fun-meta-schema test-add)))
            java.lang.Boolean))
     (is (= (second (first (get-fun-meta-schema-anonymous
-                            (get-meta))))    java.lang.Boolean))
+                            (meta test-fun-def))))    java.lang.Boolean))
     ))
 
 
