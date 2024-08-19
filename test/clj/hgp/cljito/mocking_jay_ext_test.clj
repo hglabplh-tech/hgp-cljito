@@ -25,3 +25,5 @@
             :any-int?-key :any-int?-key :any-int?-key)
     (is (= (fun-mock-call test-add  7 8 9) 5))
     ))
+
+(run-tests)

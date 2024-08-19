@@ -125,27 +125,27 @@
 (defn collect-meta-active-data [func-name & args]
   `(if (= (find-meta-for-fun ~func-name) nil)
      `(let [schema-here? (not= (get-fun-meta-schema ~func-name) nil)]
-       (if schema-here?
-         (let [schema-val## (get-fun-meta-schema ~func-name)
-               schema-val-map## (parse-meta-to-map schema-val##)]
-           (swap! mock-meta conj (FunMetata. ~func-name
-                                             (get (first schema-val-map##)
-                                                  :return-type)
-                                             (get (get (second schema-val-map##)
-                                                       :arg-info-map)
-                                                  :types-vect)
-                                             (ActiveDataCustom.
-                                               (get (get (second schema-val-map##)
-                                                         :arg-info-map)
-                                                    :names-vect)
-                                               (get (get (second schema-val-map##)
-                                                         :arg-info-map)
-                                                    :optional?-vect))))
-           )
-         (swap! mock-meta conj (FunMetata. func-name
-                                           nil
-                                           (map type args)
-                                           nil))))))
+        (if schema-here?
+          (let [schema-val## (get-fun-meta-schema ~func-name)
+                schema-val-map## (parse-meta-to-map schema-val##)]
+            (swap! mock-meta conj (FunMetata. ~func-name
+                                              (get (first schema-val-map##)
+                                                   :return-type)
+                                              (get (get (second schema-val-map##)
+                                                        :arg-info-map)
+                                                   :types-vect)
+                                              (ActiveDataCustom.
+                                                (get (get (second schema-val-map##)
+                                                          :arg-info-map)
+                                                     :names-vect)
+                                                (get (get (second schema-val-map##)
+                                                          :arg-info-map)
+                                                     :optional?-vect))))
+            )
+          (swap! mock-meta conj (FunMetata. func-name
+                                            nil
+                                            (map type args)
+                                            nil))))))
 
 
 (defn collect-flow-calls [func-name ret-value & args]
@@ -188,24 +188,30 @@
 
 
 
-(defmacro fun-mock-call [fun-name & args]
-  `(apply collect-meta-active-data ~fun-name ~args)
-  `(let [fun-name## ~fun-name
-         args## ~args
-         result## @(apply filter-action fun-name## args##)]
-     `(apply collect-flow-calls fun-name## result## args##)
-     result##))
+(clojure.core/defn fun-mock-call [fun-name & args]
+  `(apply collect-meta-active-data `~fun-name `~args)
+  (let [fun-name# `~fun-name
+         args# `~args
+         result# (apply filter-action fun-name# args#)]
+     (apply collect-flow-calls fun-name# result# args#)
+     result#))
 
-(defmacro mock-call [fun-name]
-  `(let [func-name## ~fun-name]
-   @(fn [args]
-      (fun-mock-call func-name## args)
-      )))
+(clojure.core/defn mock-call [fun-name]
+  (let [replace-fun# (gensym "mockfun-id")
+        new-fun# (gensym "new mockfun-id")
+        fun-name# fun-name]
+
+      (clojure.core/defn `~replace-fun# [& args]
+                        (fun-mock-call
+                          `~fun-name# args))
+
+            #'(transfer-fun-meta
+             `~replace-fun#
+             `~fun-name#)))
+
 
 (defmacro mock [fun code]
-  `(let [fun## fun]
-          (with-redefs [fun## (mock-call fun##)]
-    code)))
+ )
 
 (defn unmock [funs])
 

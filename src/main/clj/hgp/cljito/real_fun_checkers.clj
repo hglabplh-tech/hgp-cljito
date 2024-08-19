@@ -5,13 +5,25 @@
             [active.data.realm :as realm]
             [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
+            [active.data.realm.internal.record-meta :as act-meta]
             [schema.spec.core :refer :all]
             [schema.core :as schema]))
 
 (defmacro get-fun-meta [funname]
   `(meta (var ~funname)))
 
+(clojure.core/defn get-active-meta [all-meta-data gen-meta-data]
+  (let [record-meta-data (get all-meta-data act-meta/record-realm-meta-key)
+        fields-meta-data (get all-meta-data act-meta/fields-realm-map-meta-key)
+        schema-meta-data (get all-meta-data :schema)
+        result-meta (conj  {:schema schema-meta-data act-meta/record-realm-meta-key record-meta-data
+                            act-meta/fields-realm-map-meta-key fields-meta-data} gen-meta-data)]
+    (println  result-meta)
+    result-meta
 
+    )
+
+  )
 ;;; implement it with that logic slightly changed
 ;; from active-data and in active data it works the thing
 ;; with using constantly seems to me a very good idea
@@ -22,7 +34,8 @@
   [generated-fun orig-fun]
   `(do (alter-meta! (var ~generated-fun)
                     (constantly
-                      (assoc (meta (var ~orig-fun))
+                      (assoc (get-active-meta (meta (var ~orig-fun))
+                                              (meta (var ~generated-fun)))
                         :mock-type :fun)))
        (var ~generated-fun)))
 
