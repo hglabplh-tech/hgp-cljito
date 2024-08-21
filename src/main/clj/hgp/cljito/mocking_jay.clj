@@ -16,6 +16,14 @@
 (defn any-list? [value] (list? value))
 (defn any-long? [value] (= (type value) java.lang.Long))
 (defn any-map? [value] (map? value))
+
+(defn any-object? [value] (= (type value) java.lang.Object))
+(defn any-set? [value] (set? value))
+(defn any-set-of? [value klass] (set? klass))
+(defn any-short? [value] (= (type value) java.lang.Short))
+(defn any-String? [value] (string? value))
+(defn any-vararg? [value] ())
+
 ;; create mapping for functions
 ;; Meta data
 (def type-predicate-map
@@ -191,27 +199,27 @@
 (clojure.core/defn fun-mock-call [fun-name & args]
   `(apply collect-meta-active-data `~fun-name `~args)
   (let [fun-name# `~fun-name
-         args# `~args
-         result# (apply filter-action fun-name# args#)]
-     (apply collect-flow-calls fun-name# result# args#)
-     result#))
+        args# `~args
+        result# (apply filter-action fun-name# args#)]
+    (apply collect-flow-calls fun-name# result# args#)
+    result#))
 
-(clojure.core/defn mock-call [fun-name]
-  (let [replace-fun# (gensym "mockfun-id")
-        new-fun# (gensym "new mockfun-id")
-        fun-name# fun-name]
-
-      (clojure.core/defn `~replace-fun# [& args]
-                        (fun-mock-call
-                          `~fun-name# args))
-
-            #'(transfer-fun-meta
-             `~replace-fun#
-             `~fun-name#)))
+(defn mock-new-fun  [fun-name & args]
+                     `(fun-mock-call
+                        ~fun-name args))
+(defmacro mock-call [fun-name]
+    `(do
+       (transfer-fun-meta
+        (mock-new-fun ~fun-name )
+         (var ~fun-name))))
 
 
-(defmacro mock [fun code]
- )
+(defmacro mock [fun & args]
+  `(do
+     (alter-var-root (var ~fun) (clojure.core/fn [f]
+                                    (apply (mock-call ~fun) args)))))
+
+
 
 (defn unmock [funs])
 

@@ -26,4 +26,20 @@
     (is (= (fun-mock-call test-add  7 8 9) 5))
     ))
 
+(clojure.core/defn thats-me [msg]  (println "What :" msg) )
+(clojure.core/defn thats-not-me [msg]  (println "Why :" msg) )
+(deftest over-write-name
+  (testing "hey whats up"
+
+    (thats-me "blubber")
+    (thats-not-me "blubber")
+    (alter-var-root (var thats-me )  (clojure.core/fn [f]
+                                       (clojure.core/fn [msg]
+                                                 (thats-not-me msg))))
+    (thats-me "huhu")
+
+
+
+    ))
+
 (run-tests)

@@ -13,12 +13,12 @@ public class DeepMock {
         this.oldBindings = new Atom(new AtomicReference<IPersistentMap>());
     }
 
-    public static IPersistentMap createDeepMockFor(IFn... funs) {
+    public static IPersistentMap createDeepMockFor(Var... funs) {
         DeepMock inst = new DeepMock();
         return inst.mockOf(funs);
     }
 
-    public IPersistentMap mockOf(IFn... funs) {// change to map
+    public IPersistentMap mockOf(Var ... funs) {// change to map
         IPersistentMap result = PersistentArrayMap.EMPTY;
         IPersistentMap oldVals = PersistentArrayMap.EMPTY;
         for(Var actVar : funs) {
