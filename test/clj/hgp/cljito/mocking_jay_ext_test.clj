@@ -21,8 +21,14 @@
 
 (deftest the-active-data-base-test
   (testing "One basic test for mocking with active data"
-    (when-> test-add return-val 5
-            :any-int?-key :any-int?-key :any-int?-key)
+    (call-cond-> test-add
+                 :when
+                 :any-boolean?-key :<-
+                 [[:any-int?-key :$] [:any-int?-key :$] [:any-int?-key :$]
+                  [:any-set-of?-key :$ integer?]]
+                 [return-val 5]
+                 :else
+                 [do-nothing])
     (is (= (fun-mock-call test-add  7 8 9) 5))
     ))
 

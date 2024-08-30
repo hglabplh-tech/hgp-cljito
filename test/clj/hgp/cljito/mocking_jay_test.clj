@@ -36,6 +36,24 @@
     (mock i-am-a-fake-fun-store)
     (i-am-a-fake-fun-store 7 8 9)))
 
+(deftest test-extended.mock.act-data
+  (testing "the extended mock"
+
+
+    (call-cond-> i-am-a-fake-fun
+                 :when
+                 :any-boolean?-key :<-
+                 [[:any-int?-key :$] [:any-int?-key :$] [:any-int?-key :$]
+                  [:any-set-of?-key :$ integer?]]
+                 [return-val 5]
+                 :else
+                 [do-nothing])
+
+    (mock  i-am-a-fake-fun)
+    (println  "get it" (i-am-a-fake-fun 7 8 9 ))
+    ))
+
+
 
 (run-tests)
 

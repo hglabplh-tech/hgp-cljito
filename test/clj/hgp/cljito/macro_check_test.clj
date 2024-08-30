@@ -3,6 +3,7 @@
   (:require [clojure.test :refer :all]
             [clojure.walk :refer :all]
             [clojure.pprint :refer :all]
+            [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
             [active.data.realm.internal.record-meta :as act-meta]
             [schema.spec.core :refer :all]
@@ -29,6 +30,4 @@
   (testing "Test the fun-mock macro"
     (println (type i-am-a-fake-fun))
     (println (type i-am-a-fake-fun-store))
-    (println ((mock-call i-am-a-fake-fun-store)))
-    (println ((mock-call i-am-a-fake-fun)))
-    ))
+   ))

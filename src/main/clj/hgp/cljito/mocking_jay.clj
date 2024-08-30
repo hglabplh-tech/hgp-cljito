@@ -1,11 +1,9 @@
 (ns hgp.cljito.mocking-jay
-  (:refer-clojure :exclude [defn fn])
+
   (:require [clojure.walk :refer :all]
             [clojure.pprint :refer :all]
-            [active.data.realm.attach :refer :all]
-            [active.data.realm.internal.record-meta :as act-meta]
-            [schema.spec.core :refer :all]
             [hgp.cljito.real-fun-checkers :refer :all])
+
   (:import (hgp.cljito DeepMock)
            (clojure.lang IFn Var)))
 
@@ -73,11 +71,13 @@
 (defrecord ActiveDataCustom [var-names var-optional?])
 
 (defrecord ArgCond [fun params])
-(defrecord WhenClause [ret-val-type-pred param-cond])
+(defrecord WhenClauses [ret-val-type-pred param-cond])
 (defrecord Rule [function-name
                  when-clauses
                  when-action
                  else-action])
+
+
 
 (defmacro make-fn [m]
   `(clojure.core/fn [& args#]
@@ -90,13 +90,9 @@
 
 (def rule-vect (atom []))
 
-(def stored-bindings-seq (atom {}))
+(def mocked-bindings (atom {}))
 
-(defmacro real-fun-checker [fun-name]
-  `(let [real-fun# (resolve (var ~fun-name))]
-     (if real-fun#
-       real-fun#
-       (throw (Exception. (str "No such function: " '~fun-name))))))
+
 ;;(call-cond-> i-am-a-fake-fun-store
 ;                 :when
 ;                 :any-boolean?-key :<-
@@ -121,27 +117,31 @@
                             parameters (rest arg-element)]
                         (clojure.core/fn [value]
                           ;; has to be rewritten because also
-                          ;; zero parms are possible
-                          (if ((= :$ (get parameters 0))
-                               (= (count parameters) 2))
-                            (apply arg-pred
-                                   (list value
-                                         (get parameters 1)))
-                            (apply arg-pred (list value)))
+                          ;; zero parms are possible (should work !!!)
+                          (if (not= (count parameters) 0)
+                            (if ((= :$ (get parameters 0))
+                                 (= (count parameters) 2))
+                              (apply arg-pred
+                                     (list value
+                                           (get parameters 1)))
+                              (arg-pred value))
+                            (arg-pred))
                           ))) args-vect)
-
         when-action (ArgCond. (first when-action-vect)
                               (rest when-action-vect))
-        else-action (if (else?)
+        else-action (if else?
                       (ArgCond. (first else-action-vect)
-                                (rest else-action-vect)))]
-    (if delim?-ok)
-    (swap! rule-vect conj
-           (Rule. fun
-                  (WhenClause. ret-val-pred args-list)
-                  when-action
-                  else-action
-                  ))))
+                                (rest else-action-vect))
+                      nil)]
+    (if delim?-ok
+      (swap! rule-vect conj
+             (Rule. fun
+                    (WhenClauses. ret-val-pred args-list)
+                    when-action
+                    else-action
+                    ))
+      (throw (java.lang.IllegalArgumentException.
+               "macro syntax !!! ")))))
 
 (clojure.core/defn return-val [value]
   (println "Mock ret val called")
@@ -218,13 +218,16 @@
                                              ret-value))
     ))
 
+
 ;; rewrite this fun does not fit to be called from a macro :-(
 (clojure.core/defn filter-action [func-name & args]
-  (let [rule (find-action-rule-for-fun func-name)]
+  (let [rule (find-action-rule-for-fun func-name)
+        fun-meta-rec (find-meta-for-fun func-name)]
     (if (not (nil? rule))
-      (let [the-args (:arg-value rule)]
-        (loop [the-clauses (:when-clause rule)
-               condition (boolean 1)]
+      (let [the-return-type-pred (:ret-val-type-pred
+                                   (:when-clauses rule))]
+        (loop [the-clauses (:args-list (:when-clauses rule))
+               condition (the-return-type-pred (:return-type fun-meta-rec))]
           (if (not (empty? the-clauses))
             (do
               (println (first the-clauses))
@@ -234,62 +237,80 @@
                                                    args)))]
                 (recur (rest the-clauses) res)))
             (if condition
-              (let [the-action (:action rule)
-                    result (the-action the-args)]
-                (println "mock called")
+              (let [the-action (:when-action rule)
+                    result ((:fun the-action)
+                            (:params the-action))]
+                (println "when-action called with ret: "
+                         result)
                 result)
-              (do
-                (println "real called")
-                (apply func-name args))
+              (if (not (nil? (:else-action rule)))
+                (let [the-action (:else-action rule)
+                      result ((:fun the-action)
+                              (:params the-action))]
+                  (println "else-action called with ret: "
+                           result)
+                  result)
+                (do
+                  (println "real called")
+                  'real-called
+                  ;; (apply func-name args)
+                  ))
               ))
           ))
       (do
         (println "fallback")
-        (apply func-name args)
+        (apply (get @mocked-bindings #~func-name) args)
+
+        ;;(apply func-name args)
         ))))
-
-
-
-
 (clojure.core/defn fun-mock-call
-  {:static true}
   [fun-name & args]
-  `(apply collect-meta-active-data `~fun-name `~args)
+  `(apply collect-meta-active-data ~fun-name args)
   (let [fun-name# `~fun-name
-        args# `~args
+        args# args
         result# (apply filter-action fun-name# args#)]
     (apply collect-flow-calls fun-name# result# args#)
     result#))
-
-(clojure.core/defn mock-new-fun [fun-name]
-  (let [the-fun# ~fun-name
-        new-fun# (gensym "fresh-mock-fun")]
-    (clojure.core/defn `~new-fun# [& ~'args]
-      (fun-mock-call `~the-fun# ~'args))
-    `~new-fun#))
-
-(defmacro mock-call [fun-name]
-  `(do
-     (transfer-fun-meta
-       (mock-new-fun ~'fun-name)
-       (var ~fun-name))
-     ))
 
 (clojure.core/defn bind-root
   ""
   {:static true}
   [^clojure.lang.Var v f] (.bindRoot v f))
 
-(defmacro mock [fun]
-  `(do
-     ;; (alter-var-root (var ~fun) (clojure.core/fn [f]
-     ;;   (clojure.core/fn [args]
-     ;;((mock-call ~fun) args)
-     (bind-root (var ~fun) (mock-call ~fun))
 
-     ))
+;;(defn mock [fun-ns fun]
+;;  ;;{:static true}
+
+;;(let [fun-found# (ns-resolve fun-ns (symbol fun))]
+;;(alter-var-root
+;;(var (symbol (name ~fun-found#)))
+;;(clojure.core/fn [f]
+;;(clojure.core/fn [& args#]
+;;(fun-mock-call fun-found# args#)) ) )
+;;    (bind-root (var ~(symbol (name ~fun)))
+;;          clojure.core/fn [& args]
+;;(fun-mock-call fun args)
 
 
+(defn- re-export-1
+  [var-name]
+  (let [local-name `~var-name]
+    `(do
+    (swap! mocked-bindings conj
+           {(get (meta (var  ~var-name)) :name) (var ~var-name)})
+
+
+       (alter-var-root
+         (var ~var-name)
+         (constantly
+           (clojure.core/fn [& args#]
+             (fun-mock-call ~var-name args#)))))
+       ))
+
+(defmacro mock
+  "Re-exports a bunch of names, copying metadata"
+  [& names]
+  `(do ~@(map re-export-1 names)))
 
 (clojure.core/defn unmock [funs])
 
