@@ -31,7 +31,7 @@
                    [:any-set-of?-key :$ integer?]]
                  [return-val 5]
                  :else
-                 [do-nothing])
+                 [return-val "real-fun"])
 
     (mock i-am-a-fake-fun-store)
     (i-am-a-fake-fun-store 7 8 9)))
@@ -47,10 +47,10 @@
                   [:any-set-of?-key :$ integer?]]
                  [return-val 5]
                  :else
-                 [do-nothing])
+                 [return-val "real-fun"])
 
     (mock  i-am-a-fake-fun)
-    (println  "get it" (i-am-a-fake-fun 7 8 9 ))
+    (println  "get it" (i-am-a-fake-fun "Hi" 8 9 ))
     ))
 
 

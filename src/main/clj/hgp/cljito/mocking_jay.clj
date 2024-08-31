@@ -69,7 +69,7 @@
 
 ;; Function Mocking
 (defrecord ActiveDataCustom [var-names var-optional?])
-
+(defrecord Mocker [function-name])
 (defrecord ArgCond [fun params])
 (defrecord WhenClauses [ret-val-type-pred param-cond])
 (defrecord Rule [function-name
@@ -135,7 +135,7 @@
                       nil)]
     (if delim?-ok
       (swap! rule-vect conj
-             (Rule. fun
+             (Rule. `~fun
                     (WhenClauses. ret-val-pred args-list)
                     when-action
                     else-action
@@ -146,6 +146,7 @@
 (clojure.core/defn return-val [value]
   (println "Mock ret val called")
   value)
+
 (clojure.core/defn throw-ex [excp]
   (throw excp))
 
@@ -157,6 +158,9 @@
 
 (clojure.core/defn find-meta-for-fun [func-name]
   (first (filter #(= func-name (:function-name %)) @mock-meta)))
+
+(clojure.core/defn find-mocked-fun [func-name]
+(first (filter #(= func-name  (:function-name %)) @mocked-bindings)))
 
 
 (clojure.core/defn parse-arg-types [arg-type-defs]
@@ -245,32 +249,30 @@
                 result)
               (if (not (nil? (:else-action rule)))
                 (let [the-action (:else-action rule)
-                      result ((:fun the-action)
+                      result (apply (:fun the-action)
                               (:params the-action))]
                   (println "else-action called with ret: "
-                           result)
-                  result)
+                             result
+                             ))
                 (do
                   (println "real called")
-                  'real-called
-                  ;; (apply func-name args)
+                  'no-condition-fits
                   ))
               ))
           ))
       (do
         (println "fallback")
-        (apply (get @mocked-bindings #~func-name) args)
-
-        ;;(apply func-name args)
+        'no-mock-logic
         ))))
+
 (clojure.core/defn fun-mock-call
   [fun-name & args]
   `(apply collect-meta-active-data ~fun-name args)
   (let [fun-name# `~fun-name
-        args# args
-        result# (apply filter-action fun-name# args#)]
-    (apply collect-flow-calls fun-name# result# args#)
-    result#))
+        args# `~args
+        result (apply filter-action fun-name# args#)]
+    (apply collect-flow-calls fun-name# result args#)
+    result))
 
 (clojure.core/defn bind-root
   ""
@@ -278,39 +280,20 @@
   [^clojure.lang.Var v f] (.bindRoot v f))
 
 
-;;(defn mock [fun-ns fun]
-;;  ;;{:static true}
-
-;;(let [fun-found# (ns-resolve fun-ns (symbol fun))]
-;;(alter-var-root
-;;(var (symbol (name ~fun-found#)))
-;;(clojure.core/fn [f]
-;;(clojure.core/fn [& args#]
-;;(fun-mock-call fun-found# args#)) ) )
-;;    (bind-root (var ~(symbol (name ~fun)))
-;;          clojure.core/fn [& args]
-;;(fun-mock-call fun args)
-
-
-(defn- re-export-1
+(defn- mocker-1
   [var-name]
-  (let [local-name `~var-name]
-    `(do
-    (swap! mocked-bindings conj
-           {(get (meta (var  ~var-name)) :name) (var ~var-name)})
-
-
-       (alter-var-root
+    `(let [the-fun# ~var-name]
+      (alter-var-root
          (var ~var-name)
          (constantly
            (clojure.core/fn [& args#]
-             (fun-mock-call ~var-name args#)))))
-       ))
+            (fun-mock-call the-fun# args#)) ))))
+
 
 (defmacro mock
   "Re-exports a bunch of names, copying metadata"
   [& names]
-  `(do ~@(map re-export-1 names)))
+  `(do ~@(map mocker-1 names)))
 
 (clojure.core/defn unmock [funs])
 
