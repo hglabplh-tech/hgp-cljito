@@ -160,7 +160,7 @@
   (first (filter #(= func-name (:function-name %)) @mock-meta)))
 
 (clojure.core/defn find-mocked-fun [func-name]
-(first (filter #(= func-name  (:function-name %)) @mocked-bindings)))
+  (first (filter #(= func-name (:function-name %)) @mocked-bindings)))
 
 
 (clojure.core/defn parse-arg-types [arg-type-defs]
@@ -190,12 +190,12 @@
     ))
 
 (clojure.core/defn collect-meta-active-data [func-name & args]
-  `(if (= (find-meta-for-fun ~func-name) nil)
-     `(let [schema-here? (not= (get-fun-meta-schema ~func-name) nil)]
+  (if (= (find-meta-for-fun func-name) nil)
+     (let [schema-here? (not= (get-fun-meta-schema `~'func-name) nil)]
         (if schema-here?
-          (let [schema-val## (get-fun-meta-schema ~func-name)
+          (let [schema-val## (get-fun-meta-schema `~'func-name)
                 schema-val-map## (parse-meta-to-map schema-val##)]
-            (swap! mock-meta conj (FunMetata. ~func-name
+            (swap! mock-meta conj (FunMetata. func-name
                                               (get (first schema-val-map##)
                                                    :return-type)
                                               (get (get (second schema-val-map##)
@@ -250,10 +250,10 @@
               (if (not (nil? (:else-action rule)))
                 (let [the-action (:else-action rule)
                       result (apply (:fun the-action)
-                              (:params the-action))]
+                                    (:params the-action))]
                   (println "else-action called with ret: "
-                             result
-                             ))
+                           result)
+                  result)
                 (do
                   (println "real called")
                   'no-condition-fits
@@ -270,7 +270,7 @@
   `(apply collect-meta-active-data ~fun-name args)
   (let [fun-name# `~fun-name
         args# `~args
-        result (apply filter-action fun-name# args#)]
+        result (filter-action fun-name# args#)]
     (apply collect-flow-calls fun-name# result args#)
     result))
 
@@ -282,12 +282,12 @@
 
 (defn- mocker-1
   [var-name]
-    `(let [the-fun# ~var-name]
-      (alter-var-root
-         (var ~var-name)
-         (constantly
-           (clojure.core/fn [& args#]
-            (fun-mock-call the-fun# args#)) ))))
+  `(let [the-fun# ~var-name]
+     (alter-var-root
+       (var ~var-name)
+       (constantly
+         (clojure.core/fn [& args#]
+           (fun-mock-call the-fun# args#))))))
 
 
 (defmacro mock

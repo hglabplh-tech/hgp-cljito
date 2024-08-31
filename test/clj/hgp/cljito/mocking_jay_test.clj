@@ -43,7 +43,7 @@
     (call-cond-> i-am-a-fake-fun
                  :when
                  :any-boolean?-key :<-
-                 [[:any-int?-key :$] [:any-int?-key :$] [:any-int?-key :$]
+                 [[:any-string?-key :$] [:any-int?-key :$] [:any-int?-key :$]
                   [:any-set-of?-key :$ integer?]]
                  [return-val 5]
                  :else
