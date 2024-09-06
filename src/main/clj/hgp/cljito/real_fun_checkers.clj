@@ -40,6 +40,15 @@
                         :mock-type :fun)))
        (var ~generated-fun)))
 
+(defmacro add-real-fun-name
+  "Macro to set the Meta of the mocked function to a mock"
+  [generated-fun fun-name]
+  `(do (alter-meta! (var ~generated-fun)
+                    (constantly
+                      (assoc  (meta (var ~generated-fun))
+                        :real-fun-name ~fun-name)))
+       (var ~generated-fun)))
+
 
 (defmacro get-fun-meta-val-by-key [fun-name the-tag]
   `(get (meta (var ~fun-name))
@@ -87,11 +96,5 @@
      cooked-result#
      ))
 
-(clojure.core/defn get-fun-meta-schema-anonymous [meta-data]
-  (let [result (get meta-data
-                    :schema)
-        cooked-result (parse-base-schema result)
-        ]
-    cooked-result
-    ))
+
 

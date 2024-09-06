@@ -20,7 +20,13 @@
     (println msg res)
     (boolean res)))
 
-(deftest test-extended.mock
+(defn fun-store-being-spyed :- realm/boolean
+      [msg :- realm/string a :- realm/number b :- realm/number]
+  (let [res (* a b)]
+    (println msg res)
+    (boolean res)))
+
+(deftest test-extended-mock
   (testing "the extended mock"
 
 
@@ -36,7 +42,7 @@
     (mock i-am-a-fake-fun-store)
     (i-am-a-fake-fun-store 7 8 9)))
 
-(deftest test-extended.mock.act-data
+(deftest test-extended.mock-act-data
   (testing "the extended mock"
 
 
@@ -51,6 +57,15 @@
 
     (mock  i-am-a-fake-fun)
     (println  "get it" (i-am-a-fake-fun "Hi" 8 9 ))
+    ))
+
+(deftest test-simple-spy
+  (testing "A simple test for spy functionality"
+    (prolog fun-store-being-spyed)
+
+    (spy fun-store-being-spyed)
+    ;;(println (get-fun-meta fun-store-being-spyed))
+    (fun-store-being-spyed "Hello here is the result: " 8 8)
     ))
 
 

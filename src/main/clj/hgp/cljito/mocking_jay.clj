@@ -189,30 +189,30 @@
     [{:return-type return-type} {:arg-info-map arg-info-map}]
     ))
 
-(clojure.core/defn collect-meta-active-data [func-name & args]
+(clojure.core/defn collect-meta-active-data [func-name func-meta]
   (if (= (find-meta-for-fun func-name) nil)
-     (let [schema-here? (not= (get-fun-meta-schema `~'func-name) nil)]
-        (if schema-here?
-          (let [schema-val## (get-fun-meta-schema `~'func-name)
-                schema-val-map## (parse-meta-to-map schema-val##)]
-            (swap! mock-meta conj (FunMetata. func-name
-                                              (get (first schema-val-map##)
-                                                   :return-type)
-                                              (get (get (second schema-val-map##)
-                                                        :arg-info-map)
-                                                   :types-vect)
-                                              (ActiveDataCustom.
-                                                (get (get (second schema-val-map##)
-                                                          :arg-info-map)
-                                                     :names-vect)
-                                                (get (get (second schema-val-map##)
-                                                          :arg-info-map)
-                                                     :optional?-vect))))
-            )
-          (swap! mock-meta conj (FunMetata. func-name
-                                            nil
-                                            (map type args)
-                                            nil))))))
+    (let [schema-val# (get func-meta
+                           :schema)
+          schema-val-map# (if (not (seq? schema-val#))
+                            (parse-meta-to-map (parse-base-schema
+                                                 schema-val#))
+                            [])]
+
+      (swap! mock-meta conj (FunMetata. `~func-name
+                                        (get (first schema-val-map#)
+                                             :return-type)
+                                        (get (get (second schema-val-map#)
+                                                  :arg-info-map)
+                                             :types-vect)
+                                        (ActiveDataCustom.
+                                          (get (get (second schema-val-map#)
+                                                    :arg-info-map)
+                                               :names-vect)
+                                          (get (get (second schema-val-map#)
+                                                    :arg-info-map)
+                                               :optional?-vect))))
+      )))
+
 
 
 (clojure.core/defn collect-flow-calls [func-name ret-value & args]
@@ -267,7 +267,7 @@
 
 (clojure.core/defn fun-mock-call
   [fun-name & args]
-  `(apply collect-meta-active-data ~fun-name args)
+  ;;`(apply collect-meta-active-data ~fun-name args)
   (let [fun-name# `~fun-name
         args# `~args
         result (filter-action fun-name# args#)]
@@ -280,20 +280,77 @@
   [^clojure.lang.Var v f] (.bindRoot v f))
 
 
+(defn store-real-fun [fun-name]
+  `(let [meta-fun-name (get-fun-meta-name ~fun-name)]
+     (swap! mocked-bindings assoc meta-fun-name ~fun-name)
+     ))
+
+(defn switch-back-to-real-fun [])
 (defn- mocker-1
   [var-name]
   `(let [the-fun# ~var-name]
+     (store-real-fun ~var-name)
      (alter-var-root
        (var ~var-name)
        (constantly
          (clojure.core/fn [& args#]
            (fun-mock-call the-fun# args#))))))
 
-
 (defmacro mock
-  "Re-exports a bunch of names, copying metadata"
+  "mocks 1..n functions take care and only mock if the functions call things which you do not want to have
+  in your UNIT - Test AND which are extern to your project otherwise if this is neccessary
+  you may have to do a redesign of this part for in a well designed project this should NEVER
+  be needed if it is your own code"
   [& names]
   `(do ~@(map mocker-1 names)))
 
-(clojure.core/defn unmock [funs])
+
+;;; The spy functionality
+(defn get-it-spyed [fun]
+  (let [fun# `~fun]
+    (let [fun-meta# (meta fun#)]
+      (println fun-meta#))
+    (println "I am a spy and I see you: " `~fun#)))
+
+(clojure.core/defn fun-spy-call
+  [fun-name & args]
+  (let [args# `~args
+        fun-name# `~fun-name]
+    (apply collect-meta-active-data fun-name# args#)
+    (get-it-spyed `~fun-name#)
+    'spyed))
+
+(defn mr-spy-1
+  [var-name]
+  `(let [the-fun# ~var-name
+         the-fun-var# (var ~var-name)]
+     (store-real-fun ~var-name)
+     (alter-var-root
+       (var ~var-name)
+         (clojure.core/fn [f]
+           (clojure.core/fn [& args#]
+             (fun-spy-call the-fun# args#)
+             (let [result# (apply the-fun# args#)]
+               (apply collect-flow-calls the-fun# result# args#)
+               result#)))
+
+     )))
+
+(defmacro spy
+  [& names]
+  `(do ~@(map mr-spy-1 names)))
+
+(defn the-prolog-1
+  [var-name]
+  `(let [the-meta# (meta (var ~var-name))]
+     (constantly
+       (collect-meta-active-data
+         ~var-name the-meta#
+         ))))
+
+(defmacro prolog
+  [& names]
+  `(do ~@(map the-prolog-1 names)))
+
+(clojure.core/defn un-link [funs])
 
