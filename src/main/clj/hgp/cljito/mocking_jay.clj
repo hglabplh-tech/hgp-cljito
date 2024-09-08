@@ -7,7 +7,6 @@
   (:import (hgp.cljito DeepMock)
            (clojure.lang IFn Var)))
 
-
 (clojure.core/defn any-boolean? [value] (boolean? value))
 (clojure.core/defn any-byte? [value] (= (type value) java.lang.Byte))
 (clojure.core/defn any-char? [value] (char? value))
@@ -51,6 +50,8 @@
    :any-string?-key     any-string?
    :any-vararg?-key     any-vararg?
    })
+
+
 
 (clojure.core/defn get-type-pred-by-key [key]
   (get type-predicate-map key))
@@ -101,17 +102,17 @@
 ;                 [return-val 5]
 ;                 :else
 ;                 [do-nothing])
-(clojure.core/defn call-cond-> [fun
+(defn call-cond-> [fun
                                 cond?
-                                ret-val-pred
+                                ret-val-predicate
                                 delim
                                 args-vect
                                 when-action-vect
                                 else?
                                 else-action-vect]
-  (let [ret-val-pred ret-val-pred
-        delim?-ok (= delim :<-)
-        args-list (map
+  (let [ret-val-pred# ret-val-predicate
+        delim?-ok# (= delim :<-)
+        args-list# (map
                     (clojure.core/fn [arg-element]
                       (let [arg-pred (first arg-element)
                             parameters (rest arg-element)]
@@ -133,15 +134,18 @@
                       (ArgCond. (first else-action-vect)
                                 (rest else-action-vect))
                       nil)]
-    (if delim?-ok
-      (swap! rule-vect conj
-             (Rule. `~fun
-                    (WhenClauses. ret-val-pred args-list)
-                    when-action
-                    else-action
-                    ))
-      (throw (java.lang.IllegalArgumentException.
-               "macro syntax !!! ")))))
+
+       (if delim?-ok#
+         (swap! rule-vect conj
+                (Rule. fun
+                       (WhenClauses. ret-val-pred# args-list#)
+                       when-action
+                       else-action
+                       ))
+                 (throw (java.lang.IllegalArgumentException.
+                "macro syntax !!! "
+         )))))
+
 
 (clojure.core/defn return-val [value]
   (println "Mock ret val called")
@@ -190,7 +194,7 @@
     ))
 
 (clojure.core/defn collect-meta-active-data [func-name func-meta]
-  (if (= (find-meta-for-fun func-name) nil)
+  (if (= (find-meta-for-fun (get func-meta :name) ) nil)
     (let [schema-val# (get func-meta
                            :schema)
           schema-val-map# (if (not (seq? schema-val#))
@@ -224,7 +228,7 @@
 
 
 ;; rewrite this fun does not fit to be called from a macro :-(
-(clojure.core/defn filter-action [func-name & args]
+(clojure.core/defn filter-action [func func-name & args]
   (let [rule (find-action-rule-for-fun func-name)
         fun-meta-rec (find-meta-for-fun func-name)]
     (if (not (nil? rule))
@@ -265,15 +269,6 @@
         'no-mock-logic
         ))))
 
-(clojure.core/defn fun-mock-call
-  [fun-name & args]
-  ;;`(apply collect-meta-active-data ~fun-name args)
-  (let [fun-name# `~fun-name
-        args# `~args
-        result (filter-action fun-name# args#)]
-    (apply collect-flow-calls fun-name# result args#)
-    result))
-
 (clojure.core/defn bind-root
   ""
   {:static true}
@@ -285,24 +280,35 @@
      (swap! mocked-bindings assoc meta-fun-name ~fun-name)
      ))
 
-(defn switch-back-to-real-fun [])
-(defn- mocker-1
-  [var-name]
-  `(let [the-fun# ~var-name]
-     (store-real-fun ~var-name)
-     (alter-var-root
-       (var ~var-name)
-       (constantly
-         (clojure.core/fn [& args#]
-           (fun-mock-call the-fun# args#))))))
+
+(defn mock-hook
+  "Add some basic instrumentation to each var in a given namespace `sut`.
+  A poor man's profiler, this simply prints out the name of each
+  fn (var) when run."
+  [sut]
+  (let  [sut-intern (vals (ns-publics sut)) ]
+    (println  sut-intern)
+    (doseq [curf sut-intern]
+      (when (some? (:mock-key (meta curf)))
+        (let [fun-name# (get (meta curf) :name)]
+          (store-real-fun curf); ensure a fn
+             (alter-var-root
+               curf
+               (fn [f]
+                 (fn [& args#]
+                   (let [result# (filter-action f fun-name# args#)]
+                   (apply collect-flow-calls f result# args#)
+                   ))))
+
+        )))))
 
 (defmacro mock
   "mocks 1..n functions take care and only mock if the functions call things which you do not want to have
   in your UNIT - Test AND which are extern to your project otherwise if this is neccessary
   you may have to do a redesign of this part for in a well designed project this should NEVER
-  be needed if it is your own code"
-  [& names]
-  `(do ~@(map mocker-1 names)))
+  be needed if itfis your own code"
+  [& namespaces]
+  `(do ~@(map mock-hook namespaces)))
 
 
 ;;; The spy functionality
@@ -316,41 +322,55 @@
   [fun-name & args]
   (let [args# `~args
         fun-name# `~fun-name]
-    (apply collect-meta-active-data fun-name# args#)
+    ;;(apply collect-meta-active-data fun-name# args#)
     (get-it-spyed `~fun-name#)
     'spyed))
 
-(defn mr-spy-1
-  [var-name]
-  `(let [the-fun# ~var-name
-         the-fun-var# (var ~var-name)]
-     (store-real-fun ~var-name)
-     (alter-var-root
-       (var ~var-name)
-         (clojure.core/fn [f]
-           (clojure.core/fn [& args#]
-             (fun-spy-call the-fun# args#)
-             (let [result# (apply the-fun# args#)]
-               (apply collect-flow-calls the-fun# result# args#)
-               result#)))
+(defn spy-hook
+  "Add some basic instrumentation to each var in a given namespace `sut`.
+  A poor man's profiler, this simply prints out the name of each
+  fn (var) when run."
+  [sut]
+  (let  [sut-intern (vals (ns-publics sut)) ]
+    (println  sut-intern)
+    (doseq [curf sut-intern]
+      (when (some? (:spy-key (meta curf)))
+        (do  (store-real-fun curf); ensure a fn
+        (alter-var-root
+          curf
+          (fn [f]
+            (fn [& args#]
+              (fun-spy-call f args#)
+              (let [result# (apply f args#)]
+                (apply collect-flow-calls f result# args#)
+                result#))
+            )))
 
-     )))
+        ))))
 
 (defmacro spy
-  [& names]
-  `(do ~@(map mr-spy-1 names)))
+  [& name-spaces]
+  `(do ~@(map spy-hook name-spaces)))
 
 (defn the-prolog-1
   [var-name]
   `(let [the-meta# (meta (var ~var-name))]
      (constantly
        (collect-meta-active-data
-         ~var-name the-meta#
+         (get the-meta# :name) the-meta#
          ))))
 
 (defmacro prolog
-  [& names]
-  `(do ~@(map the-prolog-1 names)))
+  [key & names]
+  (case key
+    to-spy
+  `(do
+     ~@(map (make-fn add-meta-spy) names)
+     ~@(map the-prolog-1  names))
+  to-mock
+  `(do
+     ~@(map (make-fn add-meta-mock) names)
+     ~@(map the-prolog-1  names))))
 
 (clojure.core/defn un-link [funs])
 

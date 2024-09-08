@@ -1,5 +1,5 @@
 (ns hgp.cljito.real-fun-checkers
-  (:refer-clojure :exclude [def defn fn])
+  (:refer-clojure :exclude [ defn fn])
   (:require [clojure.walk :refer :all]
             [clojure.reflect :as refl]
             [clojure.pprint :refer :all]
@@ -9,7 +9,8 @@
             [active.data.realm.internal.record-meta :as act-meta]
             [schema.spec.core :refer :all]
             [schema.core :as schema]))
-
+(def to-spy :spy-key)
+(def to-mock :mock-key)
 (defmacro get-fun-meta [funname]
   `(meta (var ~funname)))
 
@@ -40,14 +41,23 @@
                         :mock-type :fun)))
        (var ~generated-fun)))
 
-(defmacro add-real-fun-name
+(defmacro add-meta-mock
   "Macro to set the Meta of the mocked function to a mock"
-  [generated-fun fun-name]
-  `(do (alter-meta! (var ~generated-fun)
+  [fun-name]
+  `(do (alter-meta! (var ~fun-name)
                     (constantly
-                      (assoc  (meta (var ~generated-fun))
-                        :real-fun-name ~fun-name)))
-       (var ~generated-fun)))
+                      (assoc (meta (var ~fun-name))
+                        to-mock ~fun-name)))
+       (var ~fun-name)))
+
+(defmacro add-meta-spy
+  "Macro to set the Meta of the mocked function to a mock"
+  [fun-name]
+  `(do (alter-meta! (var ~fun-name)
+                    (constantly
+                      (assoc (meta (var ~fun-name))
+                        to-spy ~fun-name)))
+       (var ~fun-name)))
 
 
 (defmacro get-fun-meta-val-by-key [fun-name the-tag]

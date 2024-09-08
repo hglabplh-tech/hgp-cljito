@@ -25,12 +25,16 @@
   (let [res (* a b)]
     (println msg res)
     (boolean res)))
+(clojure.core/defn try-it [a b c]
+  (println "Ups I am here" (+ a b c)))
 
+(prolog to-spy try-it fun-store-being-spyed)
+(prolog to-mock i-am-a-fake-fun-store i-am-a-fake-fun )
 (deftest test-extended-mock
   (testing "the extended mock"
 
 
-    (call-cond-> i-am-a-fake-fun-store
+    (call-cond-> 'i-am-a-fake-fun-store
                  :when
                  :any-boolean?-key :<-
                  [[:any-int?-key :$] [:any-int?-key :$] [:any-int?-key :$]
@@ -39,14 +43,14 @@
                  :else
                  [return-val "real-fun"])
 
-    (mock i-am-a-fake-fun-store)
+    (mock hgp.cljito.mocking-jay-test)
     (i-am-a-fake-fun-store 7 8 9)))
 
 (deftest test-extended.mock-act-data
   (testing "the extended mock"
 
 
-    (call-cond-> i-am-a-fake-fun
+    (call-cond-> 'i-am-a-fake-fun
                  :when
                  :any-boolean?-key :<-
                  [[:any-string?-key :$] [:any-int?-key :$] [:any-int?-key :$]
@@ -55,17 +59,15 @@
                  :else
                  [return-val "real-fun"])
 
-    (mock  i-am-a-fake-fun)
+    (mock  hgp.cljito.mocking-jay-test)
     (println  "get it" (i-am-a-fake-fun "Hi" 8 9 ))
     ))
 
 (deftest test-simple-spy
   (testing "A simple test for spy functionality"
-    (prolog fun-store-being-spyed)
-
-    (spy fun-store-being-spyed)
+    (spy hgp.cljito.mocking-jay-test)
     ;;(println (get-fun-meta fun-store-being-spyed))
-    (fun-store-being-spyed "Hello here is the result: " 8 8)
+    (try-it 8 8 8)
     ))
 
 
