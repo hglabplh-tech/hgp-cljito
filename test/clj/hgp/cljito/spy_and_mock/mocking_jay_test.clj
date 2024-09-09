@@ -1,4 +1,4 @@
-(ns hgp.cljito.mocking-jay-test
+(ns hgp.cljito.spy-and-mock.mocking-jay-test
   (:refer-clojure :exclude [def defn fn])
   (:require [clojure.test :refer :all]
             [clojure.walk :refer :all]
@@ -37,14 +37,14 @@
     (call-cond-> 'i-am-a-fake-fun-store
                  :when
                  :any-boolean?-key :<-
-                 [[:any-int?-key :$] [:any-int?-key :$] [:any-int?-key :$]
+                 [[:any-string?-key :$] [:any-int?-key :$] [:any-int?-key :$]
                    [:any-set-of?-key :$ integer?]]
                  [return-val 5]
                  :else
                  [return-val "real-fun"])
 
     (mock hgp.cljito.mocking-jay-test)
-    (i-am-a-fake-fun-store 7 8 9)))
+    (i-am-a-fake-fun-store "hello" 8 9)))
 
 (deftest test-extended.mock-act-data
   (testing "the extended mock"

@@ -1,4 +1,4 @@
-(ns hgp.cljito.macro-check-test
+(ns hgp.cljito.spy-and-mock.macro-check-test
   (:refer-clojure :exclude [def defn fn])
   (:require [clojure.test :refer :all]
             [clojure.walk :refer :all]

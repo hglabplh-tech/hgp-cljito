@@ -1,12 +1,12 @@
-(ns hgp.cljito.real-fun-checkers-ext-test
+(ns hgp.cljito.spy-and-mock.real-fun-checkers-ext-test
   (:refer-clojure :exclude [def defn fn])
   (:require [clojure.test :refer :all]
             [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
             [active.data.realm.schema :as realm-schema]
             [clojure.pprint :refer :all]
-            [hgp.cljito.real-fun-checkers :refer :all]
-            [hgp.cljito.mocking-jay :refer :all]
+            [hgp.cljito.spy-and-mock.real-fun-checkers :refer :all]
+            [hgp.cljito.spy-and-mock.mocking-jay :refer :all]
             [schema.spec.core :refer :all]))
 
 

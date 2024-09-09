@@ -1,4 +1,4 @@
-(ns hgp.cljito.real-fun-checkers
+(ns hgp.cljito.spy-and-mock.real-fun-checkers
   (:refer-clojure :exclude [ defn fn])
   (:require [clojure.walk :refer :all]
             [clojure.reflect :as refl]

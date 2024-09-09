@@ -1,8 +1,8 @@
-(ns hgp.cljito.mocking-jay
+(ns hgp.cljito.spy-and-mock.mocking-jay
 
   (:require [clojure.walk :refer :all]
             [clojure.pprint :refer :all]
-            [hgp.cljito.real-fun-checkers :refer :all])
+            [hgp.cljito.spy-and-mock.real-fun-checkers :refer :all])
 
   (:import (hgp.cljito DeepMock)
            (clojure.lang IFn Var)))

@@ -1,7 +1,7 @@
-(ns hgp.cljito.real-fun-checkers-test
+(ns hgp.cljito.spy-and-mock.real-fun-checkers-test
   (:require [clojure.test :refer :all]
             [clojure.pprint :refer :all]
-            [hgp.cljito.real-fun-checkers :refer :all])
+            [hgp.cljito.spy-and-mock.real-fun-checkers :refer :all])
   (:import (clojure.lang Symbol Namespace))
   )
 

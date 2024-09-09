@@ -1,9 +1,9 @@
-(ns hgp.cljito.mocking-jay-ext-test
+(ns hgp.cljito.spy-and-mock.mocking-jay-ext-test
   (:refer-clojure :exclude [def defn fn])
   (:require [clojure.test :refer :all]
             [active.data.realm :as realm]
             [active.data.realm.attach :refer :all]
-            [hgp.cljito.mocking-jay :refer :all]
+            [hgp.cljito.spy-and-mock.mocking-jay :refer :all]
             [active.data.realm.schema :as realm-schema]
             [schema.core :as schema]))
 
